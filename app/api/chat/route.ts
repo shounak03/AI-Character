@@ -1,28 +1,29 @@
-import { generateChat } from "@/lib/ai";
+import { generateChat, generateImage } from "@/lib/ai";
 import { NextRequest, NextResponse } from "next/server";
-import { log } from "util";
 
-export const POST = async(req: NextRequest) =>{
-    
+export const POST = async (req: NextRequest) => {
+    const body = await req.json();
+    const { message, messageHistory } = body;
+
     try {
-        const body = await req.json();
-      const { message } = body;
-    
-        console.log("MESSAGE = ",message);
-        if(!message)
-            return NextResponse.json({message:"Please provide a prompt"},{status:400});
+        const chatResponse = await generateChat(message, messageHistory);
         
-        
-        const res = await generateChat(message);
+        if (chatResponse.shouldGenerateImage) {
+            const imageBase64 = await generateImage(message);
+            return NextResponse.json({
+                text: chatResponse.text, 
+                image: imageBase64
+            }, { status: 200 });
+        }
 
-        console.log("response = ",res);
-    
-        return NextResponse.json({res},{status:200});
-        
+        return NextResponse.json({
+            text: chatResponse.text  
+        }, { status: 200 });
+
     } catch (error) {
         console.log(error);
-        
-        return NextResponse.json(error,{status:200});
+        return NextResponse.json({ 
+            error: "An error occurred" 
+        }, { status: 500 });
     }
-
 }
